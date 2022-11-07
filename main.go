@@ -2,6 +2,7 @@ package main
 
 import (
 	"api_test/router"
+	"api_test/webserver"
 )
 
 func main() {
@@ -13,6 +14,6 @@ func main() {
 	// 	}
 	// }()
 	e := router.New()
-
+	webserver.PostgresConn()
 	e.Start("127.0.0.1:3000")
 }
