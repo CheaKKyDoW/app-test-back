@@ -1,59 +1,73 @@
 package middlewares
 
 import (
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/jeypc/go-jwt-mux/config"
-	"github.com/jeypc/go-jwt-mux/helper"
+	"github.com/labstack/echo/v4"
 )
 
-func JWTMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+type jwtCustomClaims struct {
+	Name  string `json:"name"`
+	Admin bool   `json:"admin"`
+	jwt.StandardClaims
+}
 
-		c, err := r.Cookie("token")
-		if err != nil {
-			if err == http.ErrNoCookie {
-				response := map[string]string{"message": "Unauthorized"}
-				helper.ResponseJSON(w, http.StatusUnauthorized, response)
-				return
-			}
-		}
-		// mengambil token value
-		tokenString := c.Value
+func fatal(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+func JwtTest(c echo.Context) (string error) {
 
-		claims := &config.JWTClaim{}
-		// parsing token jwt
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
-			return config.JWT_KEY, nil
-		})
+	// Set custom claims
+	claims := &jwtCustomClaims{
+		"Jon Snow",
+		true,
+		jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Minute + 1).Unix(),
+		},
+	}
 
-		if err != nil {
-			v, _ := err.(*jwt.ValidationError)
-			switch v.Errors {
-			case jwt.ValidationErrorSignatureInvalid:
-				// token invalid
-				response := map[string]string{"message": "Unauthorized"}
-				helper.ResponseJSON(w, http.StatusUnauthorized, response)
-				return
-			case jwt.ValidationErrorExpired:
-				// token expired
-				response := map[string]string{"message": "Unauthorized, Token expired!"}
-				helper.ResponseJSON(w, http.StatusUnauthorized, response)
-				return
-			default:
-				response := map[string]string{"message": "Unauthorized"}
-				helper.ResponseJSON(w, http.StatusUnauthorized, response)
-				return
-			}
-		}
+	// Create token with claims
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-		if !token.Valid {
-			response := map[string]string{"message": "Unauthorized"}
-			helper.ResponseJSON(w, http.StatusUnauthorized, response)
-			return
-		}
+	// Generate encoded token and send it as response.
+	t, err := token.SignedString([]byte("secret"))
+	if err != nil {
+		return err
+	}
 
-		next.ServeHTTP(w, r)
+	return c.JSON(http.StatusOK, echo.Map{
+		"token": t,
 	})
+
+	// if err != nil {
+	// 	v, _ := err.(*jwt.ValidationError)
+	// 	switch v.Errors {
+	// 	case jwt.ValidationErrorSignatureInvalid:
+	// 		// token invalid
+	// 		response := map[string]string{"message": "Unauthorized"}
+	// 		helper.ResponseJSON(w, http.StatusUnauthorized, response)
+	// 		return
+	// 	case jwt.ValidationErrorExpired:
+	// 		// token expired
+	// 		response := map[string]string{"message": "Unauthorized, Token expired!"}
+	// 		helper.ResponseJSON(w, http.StatusUnauthorized, response)
+	// 		return
+	// 	default:
+	// 		response := map[string]string{"message": "Unauthorized"}
+	// 		helper.ResponseJSON(w, http.StatusUnauthorized, response)
+	// 		return
+	// 	}
+	// }
+
+	// if !token.Valid {
+	// 	response := map[string]string{"message": "Unauthorized"}
+	// 	helper.ResponseJSON(w, http.StatusUnauthorized, response)
+	// 	return
+	// }
+
 }
