@@ -2,7 +2,6 @@ package router
 
 import (
 	"api_test/controllers"
-	"api_test/middlewares"
 	"fmt"
 	"net/http"
 
@@ -38,7 +37,6 @@ func New() *echo.Echo {
 
 	e.POST("/getuser", controllers.GetUser)
 	e.POST("/login", controllers.Login)
-	e.POST("/jwt", middlewares.JwtTest)
 	return e
 }
 

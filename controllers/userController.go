@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"api_test/middlewares"
 	"api_test/models"
 	"api_test/webserver"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,17 +15,44 @@ import (
 func Login(c echo.Context) error {
 	// User ID from path `users/:id`
 	// id := c.Param("id")
-	id := c.FormValue("id")
-	// return c.HTML(http.StatusOK, "<b>Thank you! "+id+"</b>")
-	return c.String(http.StatusOK, id)
+	res := &models.JsonReturn{
+		Data:   nil,
+		Status: http.StatusOK,
+	}
+
+	username := c.FormValue("username")
+	password := c.FormValue("password")
+	if username != "" && password != "" {
+		// if { check id/pass from DB
+
+		jwt, err := middlewares.JwtTest(username)
+		if err != nil {
+			return err
+		}
+
+		data := []byte(`{"token":"` + jwt + `" }`)
+		var jsonMap map[string]string
+		json.Unmarshal([]byte(data), &jsonMap)
+		if err != nil {
+			panic(err)
+		}
+
+		res.Data = jsonMap
+
+		return c.JSON(http.StatusOK, res)
+
+		// }
+	}
+
+	return c.JSON(http.StatusOK, res)
 
 }
 
 func GetUser(c echo.Context) error {
 	lim := c.FormValue("limit")
-	user, err := webserver.DBCon.Query("SELECT * FROM mock_data limit " + lim)
+	user, err := webserver.DBCon.Query("SELECT  first_name, last_name, email, gender, ip_address FROM users limit " + lim)
 	if err != nil {
-		fmt.Println("err", err)
+		fmt.Println("GetUser err DB", err)
 		return nil
 	}
 	defer user.Close()
@@ -51,7 +80,12 @@ func GetUser(c echo.Context) error {
 		m := make(map[string]interface{})
 
 		for i := range columns {
-			m[columns[i]] = columns[i]
+
+			if columns[i] == "nil" {
+				m[columns[i]] = nil
+			} else {
+				m[columns[i]] = columns[i]
+			}
 		}
 		v.Data = append(v.Data, m)
 		//
