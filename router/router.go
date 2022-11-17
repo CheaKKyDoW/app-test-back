@@ -37,6 +37,8 @@ func New() *echo.Echo {
 
 	e.POST("/getuser", controllers.GetUser)
 	e.POST("/login", controllers.Login)
+	e.POST("/RegisterAccount", controllers.RegisterAccount)
+
 	return e
 }
 

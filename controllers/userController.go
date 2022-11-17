@@ -4,6 +4,7 @@ import (
 	"api_test/middlewares"
 	"api_test/models"
 	"api_test/webserver"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,6 +12,39 @@ import (
 
 	"github.com/labstack/echo/v4"
 )
+
+func CheckAccount(c models.User) bool {
+	var data string
+	err := webserver.DBCon.QueryRow("SELECT first_name FROM public.users where first_name = $1 and password =$2;", c.Username, c.Password).Scan(&data)
+	return err == nil
+
+}
+
+func RegisterAccount(c echo.Context) error {
+	var data string
+	var user models.User
+	err_bind := c.Bind(&user)
+	if err_bind != nil {
+		return c.String(http.StatusBadRequest, "bad request params")
+	}
+	err := webserver.DBCon.QueryRow("SELECT first_name,email FROM public.users where first_name = $1 and password =$2;", user.Username, user.Email).Scan(&data)
+	if err == nil {
+		return c.JSON(http.StatusBadRequest, "Register Account Error")
+	}
+	//
+	query := "INSERT INTO users (first_name, lastname) VALUES ( ?, ?)"
+	insertResult, err := webserver.DBCon.ExecContext(context.Background(), query, user.Username, user.Password)
+	if err != nil {
+		log.Fatalf("impossible insert Users: %s", err)
+	}
+	id, err := insertResult.LastInsertId()
+	if err != nil {
+		log.Fatalf("impossible to retrieve last inserted id: %s", err)
+	}
+	log.Printf("inserted id: %d", id)
+	//
+	return c.JSON(http.StatusOK, "Registed")
+}
 
 func Login(c echo.Context) error {
 	// User ID from path `users/:id`
@@ -20,28 +54,38 @@ func Login(c echo.Context) error {
 		Status: http.StatusOK,
 	}
 
-	username := c.FormValue("username")
-	password := c.FormValue("password")
-	if username != "" && password != "" {
-		// if { check id/pass from DB
+	var user models.User
+	err := c.Bind(&user)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "bad request")
+	}
 
-		jwt, err := middlewares.JwtTest(username)
-		if err != nil {
-			return err
+	if user.Username != "" && user.Password != "" {
+		auth_account := CheckAccount(user)
+		if auth_account {
+
+			jwt, err := middlewares.JwtTest(user.Username)
+			if err != nil {
+				return err
+			}
+
+			data := []byte(`{"token":"` + jwt + `" }`)
+			var jsonMap map[string]string
+			json.Unmarshal([]byte(data), &jsonMap)
+			if err != nil {
+				panic(err)
+			}
+
+			res.Data = jsonMap
+
+			return c.JSON(http.StatusOK, res)
+
+		} else {
+			return c.JSON(http.StatusOK, &models.JsonReturn{
+				Data:   "ไม่พบข้อมูล",
+				Status: http.StatusOK,
+			})
 		}
-
-		data := []byte(`{"token":"` + jwt + `" }`)
-		var jsonMap map[string]string
-		json.Unmarshal([]byte(data), &jsonMap)
-		if err != nil {
-			panic(err)
-		}
-
-		res.Data = jsonMap
-
-		return c.JSON(http.StatusOK, res)
-
-		// }
 	}
 
 	return c.JSON(http.StatusOK, res)
