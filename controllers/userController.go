@@ -4,11 +4,11 @@ import (
 	"api_test/middlewares"
 	"api_test/models"
 	"api_test/webserver"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -21,29 +21,41 @@ func CheckAccount(c models.User) bool {
 }
 
 func RegisterAccount(c echo.Context) error {
-	var data string
+	var id_check string
 	var user models.User
+	var dt = time.Now()
+	datetime := dt.Format(time.RFC3339Nano)
+	// var id_return int
 	err_bind := c.Bind(&user)
 	if err_bind != nil {
 		return c.String(http.StatusBadRequest, "bad request params")
 	}
-	err := webserver.DBCon.QueryRow("SELECT first_name,email FROM public.users where first_name = $1 and password =$2;", user.Username, user.Email).Scan(&data)
+	err := webserver.DBCon.QueryRow("SELECT id FROM public.users where first_name = $1 or email = $2;", user.Username, user.Email).Scan(&id_check)
+
 	if err == nil {
 		return c.JSON(http.StatusBadRequest, "Register Account Error")
 	}
 	//
-	query := "INSERT INTO users (first_name, lastname) VALUES ( ?, ?)"
-	insertResult, err := webserver.DBCon.ExecContext(context.Background(), query, user.Username, user.Password)
-	if err != nil {
-		log.Fatalf("impossible insert Users: %s", err)
+	if id_check == "" {
+
+		jwt, err := middlewares.JwtTest(user.Password)
+		if err != nil {
+			log.Fatalf("JWT Error%s", err)
+		}
+		query := "INSERT INTO users (first_name, last_name, email, gender, password, token,created) VALUES ($1,$2,$3,$4,$5,$6,$7) ;"
+		insertResult, err := webserver.DBCon.Exec(query, user.Username, user.Password, user.Email, "", "", jwt, datetime)
+		if err != nil {
+			log.Fatalf("impossible insert Users: %s", err)
+		}
+		// id, err := insertResult.LastInsertId()
+		if err != nil {
+			log.Fatalf("impossible to retrieve last inserted id: %s", err)
+		}
+		log.Printf("inserted id: %d", insertResult)
+		return c.JSON(http.StatusOK, "Registed")
 	}
-	id, err := insertResult.LastInsertId()
-	if err != nil {
-		log.Fatalf("impossible to retrieve last inserted id: %s", err)
-	}
-	log.Printf("inserted id: %d", id)
 	//
-	return c.JSON(http.StatusOK, "Registed")
+	return c.JSON(http.StatusOK, "Register Failed")
 }
 
 func Login(c echo.Context) error {
