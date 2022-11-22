@@ -62,7 +62,7 @@ func Login(c echo.Context) error {
 	// User ID from path `users/:id`
 	// id := c.Param("id")
 	res := &models.JsonReturn{
-		Data:   nil,
+		Result: nil,
 		Status: http.StatusOK,
 	}
 
@@ -88,13 +88,13 @@ func Login(c echo.Context) error {
 				panic(err)
 			}
 
-			res.Data = jsonMap
+			res.Result = jsonMap
 
 			return c.JSON(http.StatusOK, res)
 
 		} else {
 			return c.JSON(http.StatusOK, &models.JsonReturn{
-				Data:   "ไม่พบข้อมูล",
+				Result: "ไม่พบข้อมูล",
 				Status: http.StatusOK,
 			})
 		}
@@ -148,7 +148,7 @@ func GetUser(c echo.Context) error {
 	}
 
 	u := models.JsonReturn{
-		Data:   v.Data,
+		Result: v.Data,
 		Status: http.StatusOK,
 	}
 
