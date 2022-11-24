@@ -2,6 +2,8 @@ package helper
 
 import (
 	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/hex"
 	"strconv"
 	"strings"
 )
@@ -14,6 +16,12 @@ func HashSha1(text string) string {
 	h := sha1.New()
 	h.Write([]byte(text))
 	return string(h.Sum(nil))
+}
+
+func HashSha256(text string) string {
+	h := sha256.New()
+	h.Write([]byte(text))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func StringConvertToFloat64(text string) (*float64, error) {

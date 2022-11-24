@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"api_test/helper"
 	"api_test/middlewares"
 	"api_test/models"
 	"api_test/webserver"
@@ -42,8 +43,9 @@ func RegisterAccount(c echo.Context) error {
 		if err != nil {
 			log.Fatalf("JWT Error%s", err)
 		}
+		enc_pass := helper.HashSha256(user.Password)
 		query := "INSERT INTO users (first_name, last_name, email, gender, password, token,created) VALUES ($1,$2,$3,$4,$5,$6,$7) ;"
-		insertResult, err := webserver.DBCon.Exec(query, user.Username, user.Password, user.Email, "", "", jwt, datetime)
+		insertResult, err := webserver.DBCon.Exec(query, user.Username, "", user.Email, "", enc_pass, jwt, datetime)
 		if err != nil {
 			log.Fatalf("impossible insert Users: %s", err)
 		}
