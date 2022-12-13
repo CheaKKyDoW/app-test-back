@@ -1,12 +1,9 @@
 package models
 
-// type JsonReturn struct {
-// 	Status int         `json:"status"`
-// 	Time   time.Time   `json:"time"`
-// 	Data   interface{} `json:"data"`
-// }
+import "time"
 
 type JsonReturn struct {
+	Time        time.Time   `json:"time"`
 	Title       string      `json:"title"`
 	Status      int         `json:"status"`
 	Description string      `json:"description"`

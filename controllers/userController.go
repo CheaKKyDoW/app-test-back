@@ -102,13 +102,16 @@ func Login(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, res)
+	return c.JSON(http.StatusOK, &models.JsonReturn{
+		Result: "ไม่พบข้อมูล",
+		Status: http.StatusOK,
+	})
 
 }
 
 func GetUser(c echo.Context) error {
 	lim := c.FormValue("limit")
-	user, err := webserver.DBCon.Query("SELECT  first_name, last_name, email, gender, ip_address FROM users limit " + lim)
+	user, err := webserver.DBCon.Query("SELECT  first_name, last_name, email, gender, COALESCE(ip_address, '') as ip_address FROM users limit " + lim)
 	if err != nil {
 		fmt.Println("GetUser err DB", err)
 		return nil
@@ -117,7 +120,7 @@ func GetUser(c echo.Context) error {
 	cols, _ := user.Columns()
 
 	// data := make(map[string]string)
-
+	v.Data = make([]interface{}, 0)
 	for user.Next() {
 
 		columns := make([]string, len(cols))
@@ -130,23 +133,12 @@ func GetUser(c echo.Context) error {
 			log.Fatal(err)
 		}
 
-		// for i, colName := range cols {
-		// 	data[colName] = columns[i]
-		// }
-		//
-
-		m := make(map[string]interface{})
-
+		resultMap := make(map[string]interface{})
 		for i := range columns {
-
-			if columns[i] == "nil" {
-				m[columns[i]] = nil
-			} else {
-				m[columns[i]] = columns[i]
-			}
+			resultMap[cols[i]] = columns[i]
 		}
-		v.Data = append(v.Data, m)
-		//
+		v.Data = append(v.Data, resultMap)
+
 	}
 
 	u := models.JsonReturn{
